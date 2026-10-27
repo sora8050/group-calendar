@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>グループ共有対応 カレンダー & スケジュール帳</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="app-container" id="app-container">
+    
+    <!-- カレンダーメインカード -->
+    <div class="calendar-card">
+      
+      <!-- メンバー切り替えタブバー -->
+      <div class="member-tabs-container">
+        <div id="member-tabs" class="member-tabs">
+          <button class="tab-btn active" data-user-id="all">👥 全員</button>
+          <!-- 動的にメンバータブが追加されます -->
+        </div>
+        <button id="add-member-btn" class="add-member-btn" title="メンバー追加">+ 招待・追加</button>
+      </div>
+
+      <header class="calendar-header">
+        <div class="header-left">
+          <!-- ビュー切り替え（月 / 週） -->
+          <div class="view-switch-group" id="view-switch-group">
+            <button id="view-month-btn" class="view-btn">月</button>
+            <button id="view-week-btn" class="view-btn active">週</button>
+          </div>
+
+          <div class="picker-container">
+            <select id="year-select" class="header-select"></select>
+            <select id="month-select" class="header-select"></select>
+          </div>
+        </div>
+
+        <div class="nav-buttons">
+          <button id="prev-btn" class="nav-btn" aria-label="前">&lt;</button>
+          <button id="next-btn" class="nav-btn" aria-label="次">&gt;</button>
+        </div>
+      </header>
+
+      <!-- 月表示エリア -->
+      <div id="month-view" class="view-container hidden">
+        <div class="weekdays">
+          <div class="weekday sunday">日</div>
+          <div class="weekday">月</div>
+          <div class="weekday">火</div>
+          <div class="weekday">水</div>
+          <div class="weekday">木</div>
+          <div class="weekday">金</div>
+          <div class="weekday saturday">土</div>
+        </div>
+        <div id="calendar-days" class="days-grid"></div>
+      </div>
+
+      <!-- 週表示エリア -->
+      <div id="week-view" class="view-container">
+        <div class="week-header-grid" id="week-header-grid">
+          <div class="time-corner-cell"></div>
+        </div>
+        <div class="week-body-scroll">
+          <div id="week-grid-container" class="week-grid-container"></div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- 右側：日別時間割エリア -->
+    <aside id="timetable-card" class="timetable-card hidden">
+      <header class="timetable-header">
+        <h2 id="timetable-date-title" class="timetable-title"></h2>
+        <button id="close-timetable-btn" class="close-btn" aria-label="閉じる">&times;</button>
+      </header>
+
+      <div class="timeline-container">
+        <div id="timeline-hours" class="timeline-hours"></div>
+      </div>
+    </aside>
+
+  </div>
+
+  <!-- 初回ログイン・ユーザー作成モーダル -->
+  <div id="login-modal-backdrop" class="modal-backdrop">
+    <div class="modal-content login-modal">
+      <h3 class="modal-title">プロフィールの設定</h3>
+      <p class="modal-subtext">名前と全体のカレンダーで表示するパーソナルカラーを選んでください。</p>
+      
+      <div class="form-section">
+        <label for="user-name-input" class="form-label">お名前</label>
+        <input type="text" id="user-name-input" class="form-input" placeholder="例: たろう" required>
+      </div>
+
+      <div class="form-section">
+        <label class="form-label">パーソナルカラーを選択（全16色）</label>
+        <div id="profile-color-grid" class="profile-color-grid">
+          <!-- JSで16色のラジオボタンを自動生成 -->
+        </div>
+      </div>
+
+      <button id="login-submit-btn" class="btn-submit" style="margin-top: 10px;">スケジュール帳を始める</button>
+    </div>
+  </div>
+
+  <!-- 予定追加・変更モーダル -->
+  <div id="event-modal-backdrop" class="modal-backdrop hidden">
+    <div class="modal-content">
+      <button id="close-modal-btn" class="modal-close-btn" aria-label="キャンセル">&times;</button>
+      
+      <h3 id="modal-title" class="modal-title">スケジュールを追加</h3>
+
+      <form id="event-form" class="event-form">
+        <!-- カテゴリ選択 -->
+        <div class="form-section">
+          <label class="form-label">カテゴリ</label>
+          <div class="color-picker-group">
+            <label class="color-option color-school">
+              <input type="radio" name="event-color" value="school" checked>
+              <span class="color-dot"></span>
+              <span class="color-name">学校・授業</span>
+            </label>
+            <label class="color-option color-private">
+              <input type="radio" name="event-color" value="private">
+              <span class="color-dot"></span>
+              <span class="color-name">プライベート</span>
+            </label>
+            <label class="color-option color-work">
+              <input type="radio" name="event-color" value="work">
+              <span class="color-dot"></span>
+              <span class="color-name">バイト</span>
+            </label>
+            <label class="color-option color-deadline">
+              <input type="radio" name="event-color" value="deadline">
+              <span class="color-dot"></span>
+              <span class="color-name">📌 課題・締切</span>
+            </label>
+          </div>
+        </div>
+
+        <!-- メモ（旧: 題名） -->
+        <div class="form-section">
+          <label for="event-title" id="title-label" class="form-label">メモ</label>
+          <input type="text" id="event-title" class="form-input" placeholder="メモを入力（任意）">
+        </div>
+
+        <!-- 日時設定 -->
+        <div class="form-section">
+          <label id="datetime-label" class="form-label">開始日時</label>
+          <div class="datetime-select-group">
+            <select id="start-year" class="form-select"></select>
+            <select id="start-month" class="form-select"></select>
+            <select id="start-day" class="form-select"></select>
+            <select id="start-hour" class="form-select"></select>
+            <select id="start-minute" class="form-select"></select>
+          </div>
+        </div>
+
+        <!-- 所要時間 -->
+        <div id="section-duration" class="form-section">
+          <label class="form-label">所要時間</label>
+          <div class="duration-select-group">
+            <div class="duration-item">
+              <select id="duration-days" class="form-select"></select>
+              <span>日</span>
+            </div>
+            <div class="duration-item">
+              <select id="duration-hours" class="form-select"></select>
+              <span>時間</span>
+            </div>
+            <div class="duration-item">
+              <select id="duration-minutes" class="form-select"></select>
+              <span>分</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- 毎週繰り返し -->
+        <div id="repeat-section" class="form-section repeat-container">
+          <label class="checkbox-label">
+            <input type="checkbox" id="repeat-weekly-checkbox">
+            <span class="checkbox-custom"></span>
+            <span class="checkbox-text">毎週同じ曜日・時間に繰り返す</span>
+          </label>
+          <div id="repeat-options" class="repeat-options hidden">
+            <span class="repeat-span-label">繰り返し期間:</span>
+            <select id="repeat-months" class="form-select">
+              <option value="1">1ヶ月間</option>
+              <option value="3" selected>3ヶ月間（1学期分）</option>
+              <option value="6">6ヶ月間（半年）</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- 完了ステータス -->
+        <div id="section-completed" class="form-section repeat-container hidden">
+          <label class="checkbox-label">
+            <input type="checkbox" id="completed-checkbox">
+            <span class="checkbox-custom"></span>
+            <span class="checkbox-text">この課題を完了にする（提出済み）</span>
+          </label>
+        </div>
+
+        <!-- アクション（保存 & 削除） -->
+        <div class="form-actions">
+          <button type="button" id="btn-delete-event" class="btn-delete hidden">削除</button>
+          <button type="submit" id="btn-save-event" class="btn-submit">保存</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Firebase SDK（データベース通信機能）の読み込み -->
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+
+  <script src="script.js"></script>
+</body>
+</html>
